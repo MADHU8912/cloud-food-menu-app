@@ -7,29 +7,23 @@ const PORT = process.env.PORT || 5000;
 
 app.use(cors());
 
-const data = {
-  restaurants: [
-    {
-      id: 1,
-      name: "Hyderabadi Biryani House",
-      location: "Perkit, Armoor",
-      rating: 4.5,
-      menu: [
-        { item: "Chicken Biryani", price: 180 },
-        { item: "Mutton Biryani", price: 250 }
-      ]
-    },
-    {
-      id: 2,
-      name: "Domino's Pizza",
-      location: "Nizamabad",
-      rating: 4.1,
-      menu: [
-        { item: "Veg Pizza", price: 149 },
-        { item: "Cheese Burst Pizza", price: 249 }
-      ]
-    }
-  ]
-};
+// ✅ Serve frontend
+app.use(express.static(path.join(__dirname, "../frontend")));
 
-app
+// ✅ API
+app.get("/api/restaurants", (req, res) => {
+  res.json([
+    { id: 1, name: "Biryani House", price: 180 },
+    { id: 2, name: "Dominos", price: 150 }
+  ]);
+});
+
+// ✅ Home route (IMPORTANT)
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
+});
+
+// ✅ KEEP SERVER ALIVE
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server running on port " + PORT);
+});
