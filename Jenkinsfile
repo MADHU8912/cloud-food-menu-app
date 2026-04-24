@@ -60,13 +60,13 @@ pipeline {
         }
 
         stage('Run Container Local') {
-            steps {
-                bat '''
-                docker rm -f food-app || exit 0
-                docker run -d -p 8083:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
-                '''
-            }
-        }
+    steps {
+        bat '''
+        docker rm -f food-app || echo no old container
+        docker run -d -p 8084:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+        '''
+    }
+}
 
         stage('Build Report') {
             steps {
