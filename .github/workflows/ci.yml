@@ -1,0 +1,19 @@
+name: CI Build Check
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Check Files
+        run: ls -la
+
+      - name: Docker Build Test
+        run: docker build -t cloud-food-menu-app .
