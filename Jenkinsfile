@@ -13,10 +13,15 @@ pipeline {
             }
         }
 
-        stage('Docker Build Image') {
+        stage('Check Files') {
+            steps {
+                bat 'dir'
+            }
+        }
+
+        stage('Docker Build') {
             steps {
                 bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
-                bat 'docker images'
             }
         }
 
@@ -27,10 +32,7 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat '''
-                    docker logout
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    '''
+                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
                 }
             }
         }
@@ -43,14 +45,13 @@ pipeline {
 
         stage('Docker Pull Test') {
             steps {
-                bat 'docker rmi %IMAGE_NAME%:%IMAGE_TAG%'
                 bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
             }
         }
 
         stage('Build Report') {
             steps {
-                bat 'echo Docker build, push and pull completed successfully > build-report.txt'
+                bat 'echo Build Success > build-report.txt'
                 archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
             }
         }
