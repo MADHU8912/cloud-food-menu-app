@@ -1,0 +1,52 @@
+{
+  "restaurants": [
+    {
+      "id": 1,
+      "name": "Hyderabadi Biryani House",
+      "location": "Perkit, Armoor",
+      "rating": 4.5,
+      "image": "https://images.unsplash.com/photo-1563379091339-03246963d96c",
+      "menu": [
+        { "item": "Chicken Biryani", "price": 180 },
+        { "item": "Mutton Biryani", "price": 250 },
+        { "item": "Egg Biryani", "price": 120 }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Sri Sai Family Restaurant",
+      "location": "NH 44, Dichpalli",
+      "rating": 4.2,
+      "image": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c",
+      "menu": [
+        { "item": "Veg Meals", "price": 120 },
+        { "item": "Chicken Curry", "price": 200 },
+        { "item": "Roti", "price": 20 }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Domino's Pizza",
+      "location": "Nizamabad",
+      "rating": 4.1,
+      "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591",
+      "menu": [
+        { "item": "Veg Pizza", "price": 149 },
+        { "item": "Cheese Burst Pizza", "price": 249 },
+        { "item": "Garlic Bread", "price": 99 }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "KFC",
+      "location": "Nizamabad",
+      "rating": 4.0,
+      "image": "https://images.unsplash.com/photo-1562967914-608f82629710",
+      "menu": [
+        { "item": "Chicken Burger", "price": 129 },
+        { "item": "Chicken Bucket", "price": 499 },
+        { "item": "French Fries", "price": 99 }
+      ]
+    }
+  ]
+}
