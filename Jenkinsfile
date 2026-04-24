@@ -60,3 +60,10 @@ pipeline {
         }
     }
 }
+stage('Deploy to Render') {
+    steps {
+        bat '''
+        curl -X POST https://api.render.com/deploy/srv-xxxxx?key=xxxx
+        '''
+    }
+}
