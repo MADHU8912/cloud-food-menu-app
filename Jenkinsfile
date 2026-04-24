@@ -66,6 +66,9 @@ pipeline {
         docker stop food-app || echo not running
         docker rm food-app || echo not exists
         docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+        ping 127.0.0.1 -n 8 > nul
+        docker ps
+        docker logs food-app
         '''
     }
 }
