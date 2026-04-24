@@ -70,6 +70,15 @@ pipeline {
             }
         }
 
+        stage('Health Check') {
+            steps {
+                bat '''
+                timeout /t 5
+                curl -f http://localhost:8085 || exit 1
+                '''
+            }
+        }
+
         stage('Build Report') {
             steps {
                 bat '''
@@ -77,9 +86,19 @@ pipeline {
                 echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
                 echo Local URL: http://localhost:8085 >> build-report.txt
                 echo Render Deploy Triggered Successfully >> build-report.txt
+                echo Health Check Passed >> build-report.txt
                 '''
                 archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline SUCCESS'
+        }
+        failure {
+            echo 'Pipeline FAILED'
         }
     }
 }
