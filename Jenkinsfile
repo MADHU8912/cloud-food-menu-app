@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = 'nikhilabba12/cloud-food-menu-app'
         IMAGE_TAG = 'latest'
+        RENDER_DEPLOY_HOOK = 'https://api.render.com/deploy/srv-xxxxx?key=xxxx'
     }
 
     stages {
@@ -26,19 +27,19 @@ pipeline {
         }
 
         stage('Docker Login') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-creds',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            bat '''
-            docker logout
-            docker login -u %DOCKER_USER% -p %DOCKER_PASS%
-            '''
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat '''
+                    docker logout
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Push to Docker Hub') {
             steps {
@@ -52,18 +53,26 @@ pipeline {
             }
         }
 
+        stage('Deploy to Render') {
+            steps {
+                bat 'curl -X POST "%RENDER_DEPLOY_HOOK%"'
+            }
+        }
+
+        stage('Run Container Local') {
+            steps {
+                bat '''
+                docker rm -f food-app || exit 0
+                docker run -d -p 8083:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+                '''
+            }
+        }
+
         stage('Build Report') {
             steps {
-                bat 'echo Build Success > build-report.txt'
+                bat 'echo Build Push Pull Deploy Success > build-report.txt'
                 archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
             }
         }
-    }
-}
-stage('Deploy to Render') {
-    steps {
-        bat '''
-        curl -X POST https://api.render.com/deploy/srv-xxxxx?key=xxxx
-        '''
     }
 }
