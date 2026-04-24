@@ -7,7 +7,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -20,7 +19,6 @@ pipeline {
             }
         }
 
-        // ✅ ADD HERE
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -42,5 +40,17 @@ pipeline {
             }
         }
 
+        stage('Docker Pull Test') {
+            steps {
+                bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
+            }
+        }
+
+        stage('Build Report') {
+            steps {
+                bat 'echo Build and Docker Push Success > build-report.txt'
+                archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
+            }
+        }
     }
 }
