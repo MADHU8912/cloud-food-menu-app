@@ -61,23 +61,23 @@ pipeline {
         }
 
         stage('Run Container Local') {
-            steps {
-                bat '''
-                docker stop food-app || echo not running
-                docker rm food-app || echo not exists
-                docker run -d -p 8085:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
-                '''
-            }
-        }
+    steps {
+        bat '''
+        docker stop food-app || echo not running
+        docker rm food-app || echo not exists
+        docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+        '''
+    }
+}
 
-        stage('Health Check') {
-            steps {
-                bat '''
-                timeout /t 5
-                curl -f http://localhost:8085 || exit 1
-                '''
-            }
-        }
+stage('Health Check') {
+    steps {
+        bat '''
+        ping 127.0.0.1 -n 6 > nul
+        curl -f http://localhost:8085/api/restaurants || exit 1
+        '''
+    }
+}
 
         stage('Build Report') {
             steps {
