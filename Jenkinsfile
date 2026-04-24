@@ -7,15 +7,10 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
-            }
-        }
-
-        stage('Check Files') {
-            steps {
-                bat 'dir'
             }
         }
 
@@ -25,6 +20,7 @@ pipeline {
             }
         }
 
+        // ✅ ADD HERE
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -32,7 +28,10 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    bat 'echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin'
+                    bat '''
+                    docker logout
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    '''
                 }
             }
         }
@@ -43,17 +42,5 @@ pipeline {
             }
         }
 
-        stage('Docker Pull Test') {
-            steps {
-                bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
-            }
-        }
-
-        stage('Build Report') {
-            steps {
-                bat 'echo Build Success > build-report.txt'
-                archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
-            }
-        }
     }
 }
