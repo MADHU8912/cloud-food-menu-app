@@ -67,12 +67,14 @@ pipeline {
         '''
     }
 }
-
-        stage('Build Report') {
-            steps {
-                bat 'echo Build Push Pull Deploy Success > build-report.txt'
-                archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
-            }
-        }
+stage('Build Report') {
+    steps {
+        bat '''
+        echo CI/CD Pipeline Completed Successfully > build-report.txt
+        echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
+        echo Local URL: http://localhost:8085 >> build-report.txt
+        echo Render URL: https://your-render-app-name.onrender.com >> build-report.txt
+        '''
+        archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
     }
 }
