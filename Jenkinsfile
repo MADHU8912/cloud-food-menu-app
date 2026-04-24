@@ -4,10 +4,11 @@ pipeline {
     environment {
         IMAGE_NAME = 'nikhilabba12/cloud-food-menu-app'
         IMAGE_TAG = 'latest'
-        RENDER_DEPLOY_HOOK = 'https://api.render.com/deploy/srv-xxxxx?key=xxxx'
+        RENDER_DEPLOY_HOOK = 'PASTE_YOUR_REAL_RENDER_HOOK'
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout scm
@@ -60,21 +61,26 @@ pipeline {
         }
 
         stage('Run Container Local') {
-    steps {
-        bat '''
-        docker rm -f food-app || echo no old container
-        docker run -d -p 8085:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
-        '''
-    }
-}
-stage('Build Report') {
-    steps {
-        bat '''
-        echo CI/CD Pipeline Completed Successfully > build-report.txt
-        echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
-        echo Local URL: http://localhost:8085 >> build-report.txt
-        echo Render URL: https://your-render-app-name.onrender.com >> build-report.txt
-        '''
-        archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
+            steps {
+                bat '''
+                docker stop food-app || echo not running
+                docker rm food-app || echo not exists
+                docker run -d -p 8085:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+                '''
+            }
+        }
+
+        // ✅ YOUR BUILD REPORT ADDED HERE
+        stage('Build Report') {
+            steps {
+                bat '''
+                echo CI/CD Pipeline Completed Successfully > build-report.txt
+                echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
+                echo Local URL: http://localhost:8085 >> build-report.txt
+                echo Render URL: https://your-render-app-name.onrender.com >> build-report.txt
+                '''
+                archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
+            }
+        }
     }
 }
