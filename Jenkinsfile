@@ -42,45 +42,38 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Hub') {
-            steps {
-                bat 'docker push %IMAGE_NAME%:%IMAGE_TAG%'
-            }
-        }
-
         stage('Docker Pull Test') {
-            steps {
-                bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
-            }
-        }
+    steps {
+        bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
+    }
+}
 
-        stage('Deploy to Render') {
-            steps {
-                bat 'curl -X POST "%RENDER_DEPLOY_HOOK%"'
-            }
-        }
+stage('Deploy to Render') {
+    steps {
+        bat '''
+        curl -X POST "https://api.render.com/deploy/srv-d7lg0bnlk1mc73b6tnvg?key=g8v4QHrHO4o"
+        '''
+    }
+}
 
-        stage('Run Container Local') {
-            steps {
-                bat '''
-                docker stop food-app || echo not running
-                docker rm food-app || echo not exists
-                docker run -d -p 8085:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
-                '''
-            }
-        }
+stage('Run Container Local') {
+    steps {
+        bat '''
+        docker stop food-app || echo not running
+        docker rm food-app || echo not exists
+        docker run -d -p 8085:80 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+        '''
+    }
+}
 
-        // ✅ YOUR BUILD REPORT ADDED HERE
-        stage('Build Report') {
-            steps {
-                bat '''
-                echo CI/CD Pipeline Completed Successfully > build-report.txt
-                echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
-                echo Local URL: http://localhost:8085 >> build-report.txt
-                echo Render URL: https://your-render-app-name.onrender.com >> build-report.txt
-                '''
-                archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
-            }
-        }
+stage('Build Report') {
+    steps {
+        bat '''
+        echo CI/CD Pipeline Completed Successfully > build-report.txt
+        echo Docker Image: nikhilabba12/cloud-food-menu-app:latest >> build-report.txt
+        echo Local URL: http://localhost:8085 >> build-report.txt
+        echo Render Deploy Triggered Successfully >> build-report.txt
+        '''
+        archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
     }
 }
