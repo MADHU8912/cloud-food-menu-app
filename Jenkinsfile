@@ -13,26 +13,27 @@ pipeline {
             }
         }
 
-        stage('Docker Build') {
+        stage('Docker Build Image') {
             steps {
                 bat 'docker build -t %IMAGE_NAME%:%IMAGE_TAG% .'
+                bat 'docker images'
             }
         }
 
         stage('Docker Login') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'dockerhub-creds',
-            usernameVariable: 'DOCKER_USER',
-            passwordVariable: 'DOCKER_PASS'
-        )]) {
-            bat '''
-            docker logout
-            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-            '''
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    bat '''
+                    docker logout
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Push to Docker Hub') {
             steps {
@@ -42,13 +43,14 @@ pipeline {
 
         stage('Docker Pull Test') {
             steps {
+                bat 'docker rmi %IMAGE_NAME%:%IMAGE_TAG%'
                 bat 'docker pull %IMAGE_NAME%:%IMAGE_TAG%'
             }
         }
 
         stage('Build Report') {
             steps {
-                bat 'echo Build and Docker Push Success > build-report.txt'
+                bat 'echo Docker build, push and pull completed successfully > build-report.txt'
                 archiveArtifacts artifacts: 'build-report.txt', fingerprint: true
             }
         }
