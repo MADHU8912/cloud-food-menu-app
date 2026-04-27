@@ -4,14 +4,14 @@ pipeline {
     environment {
         IMAGE_NAME = "nikhilabba12/cloud-food-menu-app"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
+        CONTAINER_NEW = "food-app-green"
+        CONTAINER_OLD = "food-app-blue"
     }
 
     stages {
 
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Docker Build') {
@@ -35,7 +35,7 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Push Image') {
             steps {
                 bat """
                 docker push %IMAGE_NAME%:%IMAGE_TAG%
@@ -45,33 +45,60 @@ pipeline {
             }
         }
 
-        // ✅ NEW STAGE
         stage('Docker Pull Test') {
             steps {
+                bat "docker pull %IMAGE_NAME%:%IMAGE_TAG%"
+            }
+        }
+
+        // 🟢 START NEW VERSION (GREEN)
+        stage('Start New Container') {
+            steps {
                 bat """
-                docker pull %IMAGE_NAME%:%IMAGE_TAG%
+                docker stop %CONTAINER_NEW% || echo not running
+                docker rm %CONTAINER_NEW% || echo not exists
+
+                docker run -d -p 8086:5000 --name %CONTAINER_NEW% %IMAGE_NAME%:%IMAGE_TAG%
                 """
             }
         }
 
-        stage('Deploy to Render') {
+        // 🔍 HEALTH CHECK NEW
+        stage('Health Check New') {
             steps {
-                bat 'curl -X POST "https://api.render.com/deploy/YOUR_HOOK_URL"'
+                bat """
+                ping 127.0.0.1 -n 10 >nul
+                curl -f http://localhost:8086/api/restaurants || exit 1
+                """
             }
         }
 
-        stage('Run Container Local') {
+        // 🔁 SWITCH TRAFFIC
+        stage('Switch Traffic') {
             steps {
                 bat """
-                docker stop food-app || echo not running
-                docker rm food-app || echo not exists
+                docker stop %CONTAINER_OLD% || echo no old container
+                docker rm %CONTAINER_OLD% || echo no old container
+
+                docker rename %CONTAINER_NEW% %CONTAINER_OLD%
+
+                docker stop food-app || echo ignore
+                docker rm food-app || echo ignore
 
                 docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
                 """
             }
         }
 
-        stage('Health Check') {
+        // ☁️ DEPLOY TO CLOUD
+        stage('Deploy to Render') {
+            steps {
+                bat 'curl -X POST "https://api.render.com/deploy/YOUR_HOOK_URL"'
+            }
+        }
+
+        // ✅ FINAL HEALTH CHECK
+        stage('Final Health Check') {
             steps {
                 bat """
                 ping 127.0.0.1 -n 10 >nul
@@ -80,11 +107,12 @@ pipeline {
             }
         }
 
+        // 📄 REPORT
         stage('Build Report') {
             steps {
                 bat """
-                echo Build Success > build-report.txt
-                echo Image: %IMAGE_NAME%:%IMAGE_TAG% >> build-report.txt
+                echo SUCCESS > build-report.txt
+                echo Version: %IMAGE_TAG% >> build-report.txt
                 echo URL: http://localhost:8085 >> build-report.txt
                 """
                 archiveArtifacts artifacts: 'build-report.txt'
@@ -92,12 +120,21 @@ pipeline {
         }
     }
 
+    // 🔥 AUTO ROLLBACK IF FAILED
     post {
-        success {
-            echo 'Pipeline SUCCESS ✅'
-        }
         failure {
-            echo 'Pipeline FAILED ❌'
+            echo "❌ Deployment Failed - Rolling Back..."
+
+            bat """
+            docker stop food-app || echo ignore
+            docker rm food-app || echo ignore
+
+            docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:latest
+            """
+        }
+
+        success {
+            echo "✅ Deployment Successful"
         }
     }
 }
