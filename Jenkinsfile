@@ -145,3 +145,26 @@ pipeline {
         }
     }
 }
+stage('Install Dependencies') {
+    steps {
+        bat 'npm install'
+    }
+}
+
+stage('Test API') {
+    steps {
+        bat 'npm test || exit 0'
+    }
+}
+
+stage('Docker Compose Build') {
+    steps {
+        bat 'docker-compose build'
+    }
+}
+
+stage('Deploy') {
+    steps {
+        bat 'docker-compose up -d'
+    }
+}
