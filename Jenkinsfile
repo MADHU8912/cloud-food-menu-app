@@ -72,25 +72,29 @@ pipeline {
         }
 
         stage('Health Check') {
-            steps {
-                bat """
-                ping 127.0.0.1 -n 10 >nul
-                curl -f http://localhost:8085/api/restaurants || exit 1
-                """
-            }
-        }
+    steps {
+        bat """
+        echo Waiting for app...
+        ping 127.0.0.1 -n 30 >nul
 
-        stage('Build Report') {
-            steps {
-                bat """
-                echo Build Success > build-report.txt
-                echo Image: %IMAGE_NAME%:%IMAGE_TAG% >> build-report.txt
-                echo URL: http://localhost:8085 >> build-report.txt
-                """
-                archiveArtifacts artifacts: 'build-report.txt'
-            }
-        }
+        echo Running containers:
+        docker ps
+
+        echo Testing API:
+        curl -f http://localhost:8085 || exit 1
+        """
     }
+}
+        stage('Build Report') {
+    steps {
+        bat """
+        echo Build Success > "%WORKSPACE%\\build-report.txt"
+        echo Image: %IMAGE_NAME%:%IMAGE_TAG% >> "%WORKSPACE%\\build-report.txt"
+        echo URL: http://localhost:8085 >> "%WORKSPACE%\\build-report.txt"
+        """
+        archiveArtifacts artifacts: 'build-report.txt'
+    }
+}
 
     post {
         success {
