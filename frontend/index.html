@@ -1,26 +1,13 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Food App</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+<h1>Food Dashboard</h1>
 
-<h1>🍽️ Nizamabad Food App</h1>
+<button onclick="loadMenu()">Load Menu</button>
+<ul id="menu"></ul>
 
-<h2>Login</h2>
-<input id="username" placeholder="Username">
-<input id="password" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-
-<p id="status"></p>
-
-<hr>
-
-<h2>Restaurants</h2>
-<div id="restaurants"></div>
-
-<script src="app.js"></script>
-
-</body>
-</html>
+<script>
+async function loadMenu() {
+    let res = await fetch('/api/restaurants');
+    let data = await res.json();
+    document.getElementById('menu').innerHTML =
+        data.map(i => `<li>${i.name} - ₹${i.price}</li>`).join('');
+}
+</script>

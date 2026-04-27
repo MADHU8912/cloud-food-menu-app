@@ -1,12 +1,18 @@
-FROM node:20
+# Use official Node image
+FROM node:20-alpine
 
+# Create app directory
 WORKDIR /app
 
+# Install dependencies first (better caching)
 COPY package*.json ./
-RUN npm install
+RUN npm install --production
 
+# Copy app files
 COPY . .
 
+# Expose port
 EXPOSE 5000
 
-CMD ["npm", "start"]
+# Start app
+CMD ["node", "server.js"]
