@@ -14,12 +14,6 @@ pipeline {
             }
         }
 
-        stage('Check Files') {
-            steps {
-                bat 'dir'
-            }
-        }
-
         stage('Docker Build') {
             steps {
                 bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
@@ -47,6 +41,15 @@ pipeline {
                 docker push %IMAGE_NAME%:%IMAGE_TAG%
                 docker tag %IMAGE_NAME%:%IMAGE_TAG% %IMAGE_NAME%:latest
                 docker push %IMAGE_NAME%:latest
+                """
+            }
+        }
+
+        // ✅ NEW STAGE
+        stage('Docker Pull Test') {
+            steps {
+                bat """
+                docker pull %IMAGE_NAME%:%IMAGE_TAG%
                 """
             }
         }
