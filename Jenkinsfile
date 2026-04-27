@@ -76,8 +76,8 @@ pipeline {
 stage('Health Check') {
     steps {
         bat '''
-        ping 127.0.0.1 -n 6 > nul
-        curl -f http://localhost:8085/api/restaurants || exit 1
+        ping 127.0.0.1 -n 10 >nul
+        curl -f http://localhost:8085/health || exit 1
         '''
     }
 }

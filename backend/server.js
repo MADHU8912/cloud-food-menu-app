@@ -1,15 +1,74 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
+const path = require("path");
+
 const app = express();
 
-app.use(express.static("frontend"));
+// ✅ IMPORTANT FIX
+const PORT = process.env.PORT || 5000;
 
+app.use(express.json());
+
+// serve frontend
+const frontendPath = path.join(__dirname, "../frontend");
+app.use(express.static(frontendPath));
+
+// test route
+app.get("/", (req, res) => {
+  res.sendFile(path.join(frontendPath, "index.html"));
+});
+
+// users (default)
+const users = [
+  { username: "nikhil", password: "1234" }
+];
+
+const SECRET = "mysecretkey";
+
+// REGISTER
+app.post("/api/register", (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ message: "Missing fields" });
+  }
+
+  users.push({ username, password });
+  res.json({ message: "User registered" });
+});
+
+// LOGIN
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+
+  const user = users.find(
+    u => u.username === username && u.password === password
+  );
+
+  if (!user) {
+    return res.status(401).json({ message: "Invalid login" });
+  }
+
+  const token = jwt.sign({ username }, SECRET, { expiresIn: "1h" });
+
+  res.json({ token });
+});
+
+// RESTAURANTS
 app.get("/api/restaurants", (req, res) => {
   res.json([
-    { name: "Biryani House" },
-    { name: "Dominos" }
+    { name: "Hyderabadi Biryani House", rating: 4.5 },
+    { name: "Domino's Pizza", rating: 4.1 },
+    { name: "KFC", rating: 4.0 }
   ]);
 });
 
-app.listen(5050, () => {
-  console.log("Server running on port 5050");
+// ✅ HEALTH CHECK ROUTE (VERY IMPORTANT FOR JENKINS)
+app.get("/health", (req, res) => {
+  res.send("OK");
+});
+
+// start server
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server running on port " + PORT);
 });
