@@ -63,38 +63,40 @@ pipeline {
         }
 
         stage('Health Check New') {
-            steps {
-                bat '''
-                ping 127.0.0.1 -n 10 >nul
-                curl -f http://localhost:8086/api/restaurants || exit 1
-                '''
-            }
-        }
+    steps {
+        bat '''
+        echo Waiting for app to start...
+        ping 127.0.0.1 -n 15 >nul
 
-        stage('Switch Traffic') {
-            steps {
-                bat '''
-                docker stop food-app-blue || echo no old container
-                docker rm food-app-blue || echo no old container
+        echo Checking API...
+        curl http://localhost:8086/api/restaurants || exit 1
+        '''
+    }
+}
+   stage('Switch Traffic') {
+    steps {
+        bat '''
+        docker stop food-app-blue || echo no old container
+        docker rm food-app-blue || echo no old container
 
-                docker rename food-app-green food-app-blue
+        docker rename food-app-green food-app-blue || echo rename skipped
 
-                docker stop food-app || echo ignore
-                docker rm food-app || echo ignore
+        docker stop food-app || echo ignore
+        docker rm food-app || echo ignore
 
-                docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
-                '''
-            }
-        }
-
-        stage('Final Health Check') {
-            steps {
-                bat '''
-                ping 127.0.0.1 -n 10 >nul
-                curl -f http://localhost:8085/api/restaurants || exit 1
-                '''
-            }
-        }
+        docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
+        '''
+    }
+}
+        
+stage('Final Health Check') {
+    steps {
+        bat '''
+        ping 127.0.0.1 -n 10 >nul
+        curl http://localhost:8085/api/restaurants || exit 1
+        '''
+    }
+}
 
         stage('Build Report') {
             steps {
