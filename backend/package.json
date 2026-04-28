@@ -2,8 +2,11 @@
   "name": "food-backend",
   "version": "1.0.0",
   "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "express": "...",
-    "cors": "..."
+    "cors": "^2.8.6",
+    "express": "^4.22.1"
   }
 }
