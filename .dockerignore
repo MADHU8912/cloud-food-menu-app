@@ -1,3 +1,6 @@
 node_modules
+backend/node_modules
 .git
-npm-debug.log
+.gitignore
+Dockerfile
+Jenkinsfile

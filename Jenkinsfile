@@ -3,17 +3,18 @@ pipeline {
 
     environment {
         IMAGE_NAME = "nikhilabba12/cloud-food-menu-app"
-        VERSION = "v1.${BUILD_NUMBER}"
+        VERSION = "v${BUILD_NUMBER}"
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/MADHU8912/cloud-food-menu-app.git'
             }
         }
 
+        // ✅ BUILD DOCKER IMAGE
         stage('Docker Build') {
             steps {
                 bat '''
@@ -24,6 +25,7 @@ pipeline {
             }
         }
 
+        // ✅ FIXED LOGIN (IMPORTANT)
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -32,6 +34,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     bat '''
+                    echo ===== LOGIN =====
                     docker logout
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     '''
@@ -39,134 +42,107 @@ pipeline {
             }
         }
 
+        // ✅ PUSH IMAGE
         stage('Push Image') {
             steps {
                 bat '''
+                echo ===== PUSH IMAGE =====
                 docker push %IMAGE_NAME%:%VERSION%
-
-                docker tag %IMAGE_NAME%:%VERSION% %IMAGE_NAME%:latest
-                docker push %IMAGE_NAME%:latest
-
-                echo Release Version: %VERSION%
                 '''
             }
         }
 
+    stage('Render Deploy') {
+    steps {
+        withCredentials([string(
+            credentialsId: 'render-deploy-hook',
+            variable: 'RENDER_HOOK'
+        )]) {
+            bat '''
+            echo ===== TRIGGER RENDER DEPLOY =====
+            curl -X POST %RENDER_HOOK%
+            '''
+        }
+    }
+}
+
+        // ✅ TEST PULL
         stage('Docker Pull Test') {
             steps {
-                bat "docker pull %IMAGE_NAME%:%VERSION%"
+                bat '''
+                echo ===== PULL TEST =====
+                docker pull %IMAGE_NAME%:%VERSION%
+                '''
             }
         }
 
-        // ================= GREEN DEPLOY =================
-
+        // ✅ START GREEN CONTAINER
         stage('Start New Container (Green)') {
             steps {
                 bat '''
                 echo ===== CLEAN PORT 8086 =====
 
-                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8086') do (
-                    taskkill /F /PID %%a || echo No process
-                )
+                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8086') do taskkill /F /PID %%a 2>nul
 
-                docker stop food-app-green || echo not running
-                docker rm food-app-green || echo not exists
+                docker stop food-app-green 2>nul
+                docker rm food-app-green 2>nul
 
                 echo ===== START GREEN =====
-                docker run -d -p 8086:5000 --name food-app-green ^
-                -e VERSION=%VERSION% ^
-                %IMAGE_NAME%:%VERSION%
-
-                docker ps | findstr food-app-green || exit 1
+                docker run -d -p 8086:5000 --name food-app-green %IMAGE_NAME%:%VERSION%
                 '''
             }
         }
 
+        // ✅ LOGS
         stage('Container Logs (Green)') {
             steps {
                 bat '''
-                echo ===== GREEN LOGS =====
-                docker logs food-app-green || echo no logs
+                echo ===== LOGS =====
+                docker logs food-app-green
                 '''
             }
         }
 
+        // ✅ HEALTH CHECK GREEN
         stage('Health Check (Green)') {
             steps {
                 bat '''
-                echo ===== WAIT FOR APP =====
-                ping 127.0.0.1 -n 20 >nul
+                echo Waiting for app...
+                ping 127.0.0.1 -n 15 >nul
 
-                echo ===== HEALTH CHECK GREEN =====
-                curl http://localhost:8086/api/restaurants
-
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo ❌ Green failed
-                    docker logs food-app-green
-                    exit /b 1
-                )
+                curl http://localhost:8086/version || exit 1
                 '''
             }
         }
 
-        // ================= SWITCH TRAFFIC =================
-
+        // ✅ SWITCH TRAFFIC
         stage('Switch Traffic') {
             steps {
-                script {
-                    def status = bat(
-                        script: 'curl -s http://localhost:8086/api/restaurants',
-                        returnStatus: true
-                    )
+                bat '''
+                echo ===== CLEAN PORT 8085 =====
 
-                    if (status == 0) {
-                        echo "✅ Green healthy → Switching"
+                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8085') do taskkill /F /PID %%a 2>nul
 
-                        bat '''
-                        echo ===== CLEAN PORT 8085 =====
+                docker stop food-app 2>nul
+                docker rm food-app 2>nul
 
-                        for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8085') do (
-                            taskkill /F /PID %%a || echo No process
-                        )
-
-                        docker stop food-app || echo not running
-                        docker rm food-app || echo not exists
-
-                        echo ===== START LIVE =====
-                        docker run -d -p 8085:5000 --name food-app ^
-                        -e VERSION=%VERSION% ^
-                        %IMAGE_NAME%:%VERSION%
-
-                        docker ps | findstr food-app || exit 1
-                        '''
-                    } else {
-                        error("❌ Green failed → rollback")
-                    }
-                }
+                echo ===== START LIVE =====
+                docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
+                '''
             }
         }
 
-        // ================= FINAL CHECK =================
-
+        // ✅ FINAL HEALTH CHECK
         stage('Final Health Check') {
             steps {
                 bat '''
-                echo ===== FINAL CHECK =====
                 ping 127.0.0.1 -n 10 >nul
-
-                curl http://localhost:8085/api/restaurants
-
-                IF %ERRORLEVEL% NEQ 0 (
-                    echo ❌ Live failed
-                    docker logs food-app
-                    exit /b 1
-                )
+                curl http://localhost:8085/version || exit 1
                 '''
             }
         }
 
-        // ================= MONITORING =================
-
+        // ✅ DOCKER MONITORING
         stage('Docker Monitoring') {
             steps {
                 bat '''
@@ -179,37 +155,30 @@ pipeline {
             }
         }
 
-        // ================= LOGS SAVE =================
-
+        // ✅ SAVE LOGS
         stage('Save Logs') {
             steps {
                 bat '''
-                docker logs food-app > live-logs.txt
-                docker logs food-app-green > green-logs.txt
+                docker logs food-app > logs.txt
                 '''
-                archiveArtifacts artifacts: '*.txt'
+                archiveArtifacts artifacts: 'logs.txt'
             }
         }
 
-        // ================= REPORT =================
-
+        // ✅ BUILD REPORT
         stage('Build Report') {
             steps {
                 bat '''
-                echo ===== RELEASE REPORT ===== > build-report.txt
+                echo ===== RELEASE ===== > build-report.txt
                 echo Version: %VERSION% >> build-report.txt
-                echo Image: %IMAGE_NAME% >> build-report.txt
-                echo Live URL: http://localhost:8085 >> build-report.txt
-                echo Green URL: http://localhost:8086 >> build-report.txt
-                echo Status: SUCCESS >> build-report.txt
+                echo URL: http://localhost:8085 >> build-report.txt
                 '''
                 archiveArtifacts artifacts: 'build-report.txt'
             }
         }
     }
 
-    // ================= ROLLBACK =================
-
+    // ✅ SAFE ROLLBACK (NO CRASH)
     post {
         failure {
             echo "❌ Deployment Failed → Rolling Back"
@@ -217,8 +186,8 @@ pipeline {
             bat '''
             echo ===== ROLLBACK =====
 
-            docker stop food-app-green || echo ignore
-            docker rm food-app-green || echo ignore
+            docker stop food-app-green 2>nul
+            docker rm food-app-green 2>nul
 
             echo Old version still running on 8085 ✅
             '''

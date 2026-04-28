@@ -2,14 +2,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy ROOT package.json (not backend)
-COPY package*.json ./
+# Copy backend package files
+COPY backend/package*.json ./
 
+# Install dependencies
 RUN npm install --omit=dev
 
-# Copy full project
-COPY . .
+# Copy backend code
+COPY backend/ .
 
 EXPOSE 5000
 
-CMD ["node", "backend/server.js"]
+CMD ["node", "server.js"]
