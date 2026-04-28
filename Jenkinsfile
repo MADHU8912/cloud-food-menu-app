@@ -16,7 +16,11 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                bat "docker build -t %IMAGE_NAME%:%VERSION% ."
+                bat '''
+                echo ===== BUILD START =====
+                docker build -t %IMAGE_NAME%:%VERSION% .
+                echo ===== BUILD COMPLETE =====
+                '''
             }
         }
 
@@ -39,8 +43,11 @@ pipeline {
             steps {
                 bat '''
                 docker push %IMAGE_NAME%:%VERSION%
+
                 docker tag %IMAGE_NAME%:%VERSION% %IMAGE_NAME%:latest
                 docker push %IMAGE_NAME%:latest
+
+                echo Release Version: %VERSION%
                 '''
             }
         }
@@ -62,48 +69,60 @@ pipeline {
             }
         }
 
+        stage('Container Logs') {
+            steps {
+                bat '''
+                echo ===== CONTAINER LOGS =====
+                docker logs food-app-green || echo no logs
+                '''
+            }
+        }
+
         stage('Health Check New') {
-    steps {
-        bat '''
-        echo Waiting for app to start...
-        ping 127.0.0.1 -n 15 >nul
+            steps {
+                bat '''
+                echo Waiting for app to start...
+                ping 127.0.0.1 -n 15 >nul
 
-        echo Checking API...
-        curl http://localhost:8086/api/restaurants || exit 1
-        '''
-    }
-}
-   stage('Switch Traffic') {
-    steps {
-        bat '''
-        docker stop food-app-blue || echo no old container
-        docker rm food-app-blue || echo no old container
+                echo Checking API...
+                curl http://localhost:8086/api/restaurants || exit 1
+                '''
+            }
+        }
 
-        docker rename food-app-green food-app-blue || echo rename skipped
+        stage('Switch Traffic') {
+            steps {
+                bat '''
+                docker stop food-app-blue || echo no old container
+                docker rm food-app-blue || echo no old container
 
-        docker stop food-app || echo ignore
-        docker rm food-app || echo ignore
+                docker rename food-app-green food-app-blue || echo rename skipped
 
-        docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
-        '''
-    }
-}
-        
-stage('Final Health Check') {
-    steps {
-        bat '''
-        ping 127.0.0.1 -n 10 >nul
-        curl http://localhost:8085/api/restaurants || exit 1
-        '''
-    }
-}
+                docker stop food-app || echo ignore
+                docker rm food-app || echo ignore
+
+                docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
+                '''
+            }
+        }
+
+        stage('Final Health Check') {
+            steps {
+                bat '''
+                ping 127.0.0.1 -n 10 >nul
+                curl http://localhost:8085/api/restaurants || exit 1
+                '''
+            }
+        }
 
         stage('Build Report') {
             steps {
                 bat '''
-                echo SUCCESS > build-report.txt
+                echo ===== RELEASE REPORT ===== > build-report.txt
                 echo Version: %VERSION% >> build-report.txt
+                echo Image: %IMAGE_NAME% >> build-report.txt
                 echo URL: http://localhost:8085 >> build-report.txt
+                echo Status: SUCCESS >> build-report.txt
                 '''
                 archiveArtifacts artifacts: 'build-report.txt'
             }
