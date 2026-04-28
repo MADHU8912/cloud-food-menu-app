@@ -10,7 +10,6 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-                echo "Cloning GitHub repository..."
                 git url: 'https://github.com/MADHU8912/cloud-food-menu-app.git', branch: 'main'
             }
         }
@@ -18,28 +17,28 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo "Installing dependencies..."
-                sh 'npm install'
+                bat 'npm install'
             }
         }
 
         stage('Run Tests') {
             steps {
                 echo "Running tests..."
-                sh 'npm test || true'
+                bat 'npm test || exit 0'
             }
         }
 
         stage('Build Application') {
             steps {
                 echo "Building app..."
-                sh 'npm run build || true'
+                bat 'npm run build || exit 0'
             }
         }
 
         stage('Build Docker Image') {
             steps {
                 echo "Building Docker image..."
-                sh "docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} ."
+                bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
             }
         }
 
@@ -50,8 +49,8 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    sh '''
-                        echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    bat '''
+                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
                     '''
                 }
             }
@@ -59,32 +58,36 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                echo "Pushing image to Docker Hub..."
-                sh "docker push ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                echo "Pushing image..."
+                bat "docker push %DOCKER_IMAGE%:%DOCKER_TAG%"
+            }
+        }
+
+        stage('Pull Docker Image') {
+            steps {
+                echo "Pulling image from Docker Hub..."
+                bat "docker pull %DOCKER_IMAGE%:%DOCKER_TAG%"
             }
         }
 
         stage('Deploy Container') {
             steps {
-                echo "Stopping old container if exists..."
-                sh '''
-                    docker stop food-app || true
-                    docker rm food-app || true
-                '''
+                echo "Stopping old container..."
+                bat 'docker stop food-app || exit 0'
+                bat 'docker rm food-app || exit 0'
 
                 echo "Running new container..."
-                sh "docker run -d --name food-app -p 3000:3000 ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                bat "docker run -d --name food-app -p 3000:3000 %DOCKER_IMAGE%:%DOCKER_TAG%"
             }
         }
     }
 
     post {
         success {
-            echo "✅ Pipeline executed successfully!"
+            echo "✅ Pipeline Success!"
         }
-
         failure {
-            echo "❌ Pipeline failed. Check logs."
+            echo "❌ Pipeline Failed!"
         }
     }
 }
