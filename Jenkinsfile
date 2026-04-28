@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_IMAGE = "madhu8912/cloud-food-menu-app"
-        DOCKER_TAG = "latest"
+        IMAGE_NAME = "madhu8912/cloud-food-menu-app"
+        IMAGE_TAG = "latest"
     }
 
     stages {
@@ -17,77 +17,76 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 echo "Installing dependencies..."
-                bat 'npm install'
+                bat "npm install"
             }
         }
 
         stage('Run Tests') {
             steps {
-                echo "Running tests..."
-                bat 'npm test || exit 0'
+                echo "No test script found - skipping tests safely"
             }
         }
 
         stage('Build Application') {
             steps {
-                echo "Building app..."
-                bat 'npm run build || exit 0'
+                echo "No build script found - skipping build (backend project)"
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Docker Build') {
             steps {
                 echo "Building Docker image..."
-                bat "docker build -t %DOCKER_IMAGE%:%DOCKER_TAG% ."
+                bat "docker build -t %IMAGE_NAME%:%IMAGE_TAG% ."
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
                     usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    bat '''
-                        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    '''
+                    passwordVariable: 'DOCKER_PASS')]) {
+
+                    bat """
+                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    """
                 }
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                echo "Pushing image..."
-                bat "docker push %DOCKER_IMAGE%:%DOCKER_TAG%"
+                echo "Pushing Docker image..."
+                bat "docker push %IMAGE_NAME%:%IMAGE_TAG%"
             }
         }
 
         stage('Pull Docker Image') {
             steps {
-                echo "Pulling image from Docker Hub..."
-                bat "docker pull %DOCKER_IMAGE%:%DOCKER_TAG%"
+                echo "Pulling Docker image..."
+                bat "docker pull %IMAGE_NAME%:%IMAGE_TAG%"
             }
         }
 
         stage('Deploy Container') {
             steps {
-                echo "Stopping old container..."
-                bat 'docker stop food-app || exit 0'
-                bat 'docker rm food-app || exit 0'
+                echo "Deploying container..."
 
-                echo "Running new container..."
-                bat "docker run -d --name food-app -p 3000:3000 %DOCKER_IMAGE%:%DOCKER_TAG%"
+                bat """
+                docker stop food-app || exit 0
+                docker rm food-app || exit 0
+                docker run -d -p 3000:3000 --name food-app %IMAGE_NAME%:%IMAGE_TAG%
+                """
             }
         }
     }
 
     post {
         success {
-            echo "✅ Pipeline Success!"
+            echo "✅ Pipeline SUCCESS - App deployed successfully"
         }
+
         failure {
-            echo "❌ Pipeline Failed!"
+            echo "❌ Pipeline FAILED - Check logs"
         }
     }
 }
