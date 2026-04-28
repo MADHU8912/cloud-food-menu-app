@@ -59,82 +59,91 @@ pipeline {
         }
 
         stage('Start New Container') {
-            steps {
-                bat '''
-                docker stop food-app-green || echo not running
-                docker rm food-app-green || echo not exists
+    steps {
+        bat '''
+        echo ===== CLEAN PORT 8086 =====
 
-                docker run -d -p 8086:5000 --name food-app-green %IMAGE_NAME%:%VERSION%
-                '''
-            }
-        }
+        for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8086') do (
+            echo Killing process %%a
+            taskkill /F /PID %%a || echo No process
+        )
 
-        stage('Container Logs') {
-            steps {
-                bat '''
-                echo ===== CONTAINER LOGS =====
-                docker logs food-app-green || echo no logs
-                '''
-            }
-        }
+        echo ===== REMOVE OLD GREEN =====
+        docker stop food-app-green || echo not running
+        docker rm food-app-green || echo not exists
 
-        stage('Health Check New') {
-            steps {
-                bat '''
-                echo Waiting for app to start...
-                ping 127.0.0.1 -n 15 >nul
+        echo ===== START GREEN CONTAINER =====
+        docker run -d -p 8086:5000 --name food-app-green %IMAGE_NAME%:%VERSION%
 
-                echo Checking API...
-                curl http://localhost:8086/api/restaurants || exit 1
-                '''
-            }
-        }
-
-        stage('Switch Traffic') {
-            steps {
-                bat '''
-                docker stop food-app-blue || echo no old container
-                docker rm food-app-blue || echo no old container
-
-                docker rename food-app-green food-app-blue || echo rename skipped
-
-                docker stop food-app || echo ignore
-                docker rm food-app || echo ignore
-
-                docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
-                '''
-            }
-        }
-
-        stage('Final Health Check') {
-            steps {
-                bat '''
-                ping 127.0.0.1 -n 10 >nul
-                curl http://localhost:8085/api/restaurants || exit 1
-                '''
-            }
-        }
-
-        stage('Build Report') {
-            steps {
-                bat '''
-                echo ===== RELEASE REPORT ===== > build-report.txt
-                echo Version: %VERSION% >> build-report.txt
-                echo Image: %IMAGE_NAME% >> build-report.txt
-                echo URL: http://localhost:8085 >> build-report.txt
-                echo Status: SUCCESS >> build-report.txt
-                '''
-                archiveArtifacts artifacts: 'build-report.txt'
-            }
-        }
+        echo ===== VERIFY CONTAINER =====
+        docker ps | findstr food-app-green || exit 1
+        '''
     }
+}
 
-    post {
-        success {
-            echo "✅ Deployment Successful"
-        }
-        failure {
-            echo "❌ Deployment Failed"
-        }
+stage('Container Logs') {
+    steps {
+        bat '''
+        echo ===== CONTAINER LOGS =====
+        docker logs food-app-green || echo No logs available
+        '''
+    }
+}
+
+stage('Health Check New') {
+    steps {
+        bat '''
+        echo ===== WAIT FOR APP START =====
+        ping 127.0.0.1 -n 20 >nul
+
+        echo ===== HEALTH CHECK (GREEN) =====
+        curl http://localhost:8086/api/restaurants
+
+        IF %ERRORLEVEL% NEQ 0 (
+            echo Health check failed!
+            docker logs food-app-green
+            exit /b 1
+        )
+        '''
+    }
+}
+
+stage('Switch Traffic') {
+    steps {
+        bat '''
+        echo ===== CLEAN PORT 8085 =====
+
+        for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8085') do (
+            echo Killing process %%a
+            taskkill /F /PID %%a || echo No process
+        )
+
+        echo ===== REMOVE OLD LIVE =====
+        docker stop food-app || echo not running
+        docker rm food-app || echo not exists
+
+        echo ===== START LIVE CONTAINER =====
+        docker run -d -p 8085:5000 --name food-app %IMAGE_NAME%:%VERSION%
+
+        echo ===== VERIFY LIVE =====
+        docker ps | findstr food-app || exit 1
+        '''
+    }
+}
+
+stage('Final Health Check') {
+    steps {
+        bat '''
+        echo ===== FINAL HEALTH CHECK =====
+        ping 127.0.0.1 -n 10 >nul
+
+        curl http://localhost:8085/api/restaurants
+
+        IF %ERRORLEVEL% NEQ 0 (
+            echo Final health check failed!
+            docker logs food-app
+            exit /b 1
+        )
+        '''
     }
 }
