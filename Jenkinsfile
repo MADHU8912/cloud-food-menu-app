@@ -9,10 +9,10 @@ pipeline {
     stages {
 
         stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/MADHU8912/cloud-food-menu-app.git'
-            }
-        }
+    steps {
+        git branch: 'main', url: 'https://github.com/MADHU8912/cloud-food-menu-app.git'
+    }
+}
 
         // ✅ BUILD DOCKER IMAGE
         stage('Docker Build') {
@@ -29,18 +29,14 @@ pipeline {
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    bat '''
-                    echo ===== LOGIN =====
-                    docker logout
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    '''
-                }
-            }
-        }
+    credentialsId: 'dockerhub-creds',
+    usernameVariable: 'DOCKER_USER',
+    passwordVariable: 'DOCKER_PASS'
+)]) {
+    bat '''
+    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+    '''
+}
 
         // ✅ PUSH IMAGE
         stage('Push Image') {
