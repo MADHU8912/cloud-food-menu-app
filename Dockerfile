@@ -1,22 +1,15 @@
 FROM node:20-alpine
 
-# ✅ Add metadata labels
-LABEL version="1.0"
-LABEL maintainer="nikhilabba12"
-
 WORKDIR /app
 
-# Copy dependency files
+# Copy ROOT package.json (not backend)
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install --production
+RUN npm install --omit=dev
 
 # Copy full project
 COPY . .
 
-# Expose app port
 EXPOSE 5000
 
-# Start app
-CMD ["node", "server.js"]
+CMD ["node", "backend/server.js"]
