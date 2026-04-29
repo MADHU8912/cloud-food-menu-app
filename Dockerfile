@@ -2,15 +2,11 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy backend package files
-COPY backend/package*.json ./
+COPY package*.json ./
+RUN npm install
 
-# Install dependencies
-RUN npm install --omit=dev
-
-# Copy backend code
-COPY backend/ .
+COPY . .
 
 EXPOSE 5000
 
-CMD ["node", "server.js"]
+CMD ["npm", "start"]

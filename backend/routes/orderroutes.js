@@ -1,24 +1,59 @@
-const router = require("express").Router();
-const Order = require("../models/Order");
+const express = require('express');
+const router = express.Router();
 
-// PLACE ORDER
-router.post("/", async (req, res) => {
-  const order = await Order.create(req.body);
-  res.json(order);
+// 🔹 GET all orders
+router.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: "All orders fetched",
+        orders: [
+            { id: 1, item: "Pizza", price: 200 },
+            { id: 2, item: "Burger", price: 120 }
+        ]
+    });
 });
 
-// GET ALL ORDERS (ADMIN)
-router.get("/", async (req, res) => {
-  const orders = await Order.find().sort({ createdAt: -1 });
-  res.json(orders);
+// 🔹 GET single order
+router.get('/:id', (req, res) => {
+    const id = req.params.id;
+
+    res.json({
+        success: true,
+        message: `Order ${id} details`,
+        order: { id, item: "Pizza", price: 200 }
+    });
 });
 
-// UPDATE ORDER STATUS
-router.put("/:id", async (req, res) => {
-  const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
-    new: true
-  });
-  res.json(order);
+// 🔹 CREATE order
+router.post('/', (req, res) => {
+    const data = req.body;
+
+    res.json({
+        success: true,
+        message: "Order created",
+        order: data
+    });
+});
+
+// 🔹 UPDATE order
+router.put('/:id', (req, res) => {
+    const id = req.params.id;
+
+    res.json({
+        success: true,
+        message: `Order ${id} updated`,
+        updatedData: req.body
+    });
+});
+
+// 🔹 DELETE order
+router.delete('/:id', (req, res) => {
+    const id = req.params.id;
+
+    res.json({
+        success: true,
+        message: `Order ${id} deleted`
+    });
 });
 
 module.exports = router;
