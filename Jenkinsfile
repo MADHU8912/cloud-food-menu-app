@@ -7,12 +7,7 @@ pipeline {
 
     stages {
 
-        stage('Docker Build') {
-            steps {
-                sh '/usr/local/bin/docker build -t $IMAGE .'
-            }
-        }
-
+        // ✅ LOGIN FIRST (IMPORTANT)
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(
@@ -27,20 +22,25 @@ pipeline {
             }
         }
 
+        // ✅ THEN BUILD
+        stage('Docker Build') {
+            steps {
+                sh '/usr/local/bin/docker build -t $IMAGE .'
+            }
+        }
+
         stage('Docker Push') {
             steps {
                 sh '/usr/local/bin/docker push $IMAGE'
             }
         }
 
-        // ✅ NEW: Pull image (verification step)
         stage('Docker Pull') {
             steps {
                 sh '/usr/local/bin/docker pull $IMAGE'
             }
         }
 
-        // ✅ NEW: Deploy to Render
         stage('Deploy to Render') {
             steps {
                 withCredentials([string(credentialsId: 'render-api-key', variable: 'RENDER_API')]) {
